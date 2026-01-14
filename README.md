@@ -155,3 +155,113 @@ HTTP → HTTPS redirect
 Health checks at /
 
 Host-based routing
+
+File Structure
+.
+├── versions.tf        # Provider versions and constraints
+├── providers.tf       # AWS, Kubernetes, and Helm providers
+├── variables.tf       # Input variables
+├── vpc.tf             # VPC and networking
+├── eks.tf             # EKS cluster and node groups
+├── efs.tf             # EFS filesystem and mount targets
+├── addons.tf          # ALB controller, EFS CSI, StorageClass
+├── ingress.tf         # Optional Kubernetes Ingress
+├── outputs.tf         # Useful outputs
+└── README.md
+
+Deployment Workflow
+Prerequisites
+
+AWS CLI configured with sufficient permissions
+
+Terraform ≥ 1.5
+
+kubectl installed
+
+An ACM certificate in us-east-1 (for HTTPS ingress)
+
+Initialize Terraform
+terraform init
+
+Deploy Core Infrastructure (recommended first pass)
+terraform apply -target=module.vpc -target=module.eks -auto-approve
+
+Deploy Add-ons and Kubernetes Resources
+terraform apply -auto-approve
+
+Configure kubectl
+aws eks update-kubeconfig --region us-east-1 --name <cluster-name>
+
+Using EFS Storage in Kubernetes
+
+Example PersistentVolumeClaim:
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shared-efs-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 5Gi
+
+Security Considerations
+
+No credentials are stored in code
+
+IAM permissions are scoped via IRSA
+
+Worker nodes are placed in private subnets
+
+TLS termination is handled by ALB with ACM
+
+Terraform state is excluded from Git
+
+Git and State Management
+
+Terraform state files are ignored via .gitignore
+
+Sensitive values should be stored in .tfvars files
+
+For production use, it is recommended to:
+
+Use S3 remote state
+
+Enable DynamoDB state locking
+
+Separate environments (dev, prod)
+
+Why This Design
+
+This architecture balances:
+
+Scalability – managed node groups, ALB ingress
+
+Availability – multi-AZ everything
+
+Security – IRSA, private networking
+
+Simplicity – managed AWS services
+
+Flexibility – supports most Kubernetes workloads
+
+Next Enhancements (Optional)
+
+Remote Terraform state (S3 + DynamoDB)
+
+GitHub Actions for Terraform validation
+
+Cluster Autoscaler or Karpenter
+
+AWS WAF integration
+
+ExternalDNS for automatic DNS records
+
+Cert-Manager for in-cluster cert management
+
+License
+
+This project is provided as-is for infrastructure automation and learning purposes.
